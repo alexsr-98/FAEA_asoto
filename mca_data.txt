@@ -1,0 +1,9 @@
+Muestra : Nombre  : color
+TT+    : ttbar      : 810
+DY     : dy         : 432
+QCD    : qcd        : 920
+T      : single_top : 922
+WJets  : wjets      : 876
+WW     : ww         : 411
+WZ     : wz         : 851
+ZZ     : zz         : 420
