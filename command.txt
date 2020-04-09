@@ -1,2 +1,2 @@
 & MUESTRAS   -- DATOS-- CARPETA    --     HISTOGRAMAS               --             EJE X HISTOGRAMAS                                   --          CORTES             
-mca_data.txt -- True -- ./Pruebas4 -- MuonPt, NJet, MET, MuonPt_gen, NBJets -- p_{T}^{#mu} (GeV), NJets, E_{T}^{Miss} (GeV), p_{T}^{#mu} (GeV), NBJets -- Pt = 26, NJet >= 3, WP_btag = 1.5, NbJets >= 1
+mca_data.txt -- True -- ./Pruebas4 -- MuonPt, NJet, MET, MuonPt_gen, NBJets, EventWeight -- p_{T}^{#mu} (GeV), NJets, E_{T}^{Miss} (GeV), p_{T}^{#mu} (GeV), NBJets, EventWeight -- Pt = 26, NJet >= 3, WP_btag = 1.5, NbJets >= 1

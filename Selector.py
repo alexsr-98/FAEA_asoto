@@ -51,6 +51,7 @@ class Selector:
         self.histograms.append(r.TH1F(self.name + '_MET', 'MET',30,0,200))
         self.histograms.append(r.TH1F(self.name + '_MuonPt_gen',';p_{T}^{#mu} (GeV);Events', 20, 0, 200))
         self.histograms.append(r.TH1F(self.name + '_NBJets','NBjets',4,0,4))
+        self.histograms.append(r.TH1F(self.name + '_EventWeight','EventWeight',1,0,1))
         return
 
 
@@ -73,6 +74,7 @@ class Selector:
             self.GetHisto('MuonPt_forEff').Fill(self.muon1_pt,    self.weight)
             self.GetHisto('MuonPt').Fill(self.muon1_pt,    self.weight)
             self.GetHisto('NBJets').Fill(self.nbjets, self.weight)
+            self.GetHisto('EventWeight').Fill(0, self.weight)
         return
 
 

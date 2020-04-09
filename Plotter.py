@@ -104,10 +104,7 @@ class Plotter:
             return
 
         c = r.TCanvas('c_'+name, 'c', 10, 10, 800, 600)
-        '''
-        c.Divide(1,2)
-        c.cd(1)
-        '''
+
         upperPad = r.TPad("upperPad", "upperPad", 0.0, 0.2, 1.0, 1.0)
         upperPad.Draw()
         upperPad.cd()
@@ -122,6 +119,9 @@ class Plotter:
             h = s.GetHisto(name)
             h.SetFillColor(self.colors[counter])
             h.SetLineColor(1)
+            '''
+            h.SetBinError(2,200)
+            '''
             hstack.Add(h)
             l.AddEntry(h, s.name, "f")
             counter += 1
@@ -144,7 +144,6 @@ class Plotter:
             MaxData = hdata.GetMaximum()
             if(Max < MaxData): Max = MaxData
             l.AddEntry(hdata, self.dataSelector.name, 'p')
-        l.Draw("same")
         #----text-----
         t= r.TLatex(0.15,0.92,"CMS #font[12]{Preliminary}")
         t.SetNDC(1)
@@ -163,6 +162,8 @@ class Plotter:
         hstack.GetHistogram().GetXaxis().SetTickLength(0)
         hstack.GetHistogram().GetXaxis().SetLabelOffset(999)
         hstack.GetHistogram().GetYaxis().SetTitleSize(10)
+        
+        upperPad.SetGrid()
         #-----Canvas data/pred-------
         
         c.cd(0)
@@ -177,12 +178,10 @@ class Plotter:
         lowerPad.Draw()
         lowerPad.cd()
         h3 = copy.deepcopy(hdata.Clone("Datos"))
-        counter = 0
         suma = r.TH1F("Suma", '',h3.GetNbinsX(),h3.GetXaxis().GetXmin(),h3.GetBinWidth(1)*h3.GetNbinsX()+h3.GetXaxis().GetXmin())
         for s in self.listOfSelectors:
             h = s.GetHisto(name)
             suma.Add(h)
-            counter += 1
         
         linea = r.TH1F("Linea", '',h3.GetNbinsX(),h3.GetXaxis().GetXmin(),h3.GetBinWidth(1)*h3.GetNbinsX()+h3.GetXaxis().GetXmin())
         for i in range(0,h3.GetNbinsX()):
@@ -197,17 +196,25 @@ class Plotter:
         h3.GetXaxis().SetLabelSize(0.14)
         h3.GetYaxis().SetLabelSize(0.10)
         h3.GetYaxis().SetTitleSize(10)
+        h3.GetYaxis().SetRangeUser(0.6,1.8)
         linea.SetLineColor(r.kRed)
         linea.Draw("same")
-        
         t5 = r.TLatex(0.05,0.05,"#scale[4]{Data/pred.}")
         t5.SetNDC(1)
         t5.SetTextAngle(90)
         t5.Draw()
         
-        
+        lowerPad.SetGrid()
         #-----Canvas data/pred-------
-
+        #-----Incertidumbres---------
+        upperPad.cd()
+        suma.Draw("E2 SAME") #E2 pinta la incertidumbre como rectangulos
+        suma.SetFillColor(14)
+        suma.SetFillStyle(3244)
+        suma.SetLineColor(0)
+        l.AddEntry(suma, "Total unc.", "f")
+        l.Draw("same")
+        #-----Incertidumbres---------
         create_folder(self.savepath)
         c.Print(self.savepath + "/" + name + '.png', 'png')
         c.Print(self.savepath + "/" + name + '.pdf', 'pdf')
