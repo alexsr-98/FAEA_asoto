@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #Para leer el comando con las instrucciones
 import numpy as np
 from Selector import Selector
@@ -72,7 +73,6 @@ def drawer(options=''):
   
   #---Calculo xsection----------
   muestras,eventos = plot.GetCounts("EventWeight")
-  muestras_gen,eventos_gen = plot.GetCounts("EventWeight_gen")
   
   contador = 0
   fondo = 0
@@ -85,24 +85,86 @@ def drawer(options=''):
       fondo += eventos[contador]
     contador += 1
   
+  stat_fondo = (fondo)**(0.5)
+  stat_datos = (datos)**(0.5)
+  
   Lumi = 50
+  unc_Lumi = 0.1
   BR = 0.09732*2
-  Acceptance = eventos_gen[0]/(BR*7929.47582548) #7929.47582548 es el numero total de eventos simulados de ttbar pesados
+
+  Acceptance, unc_Acceptance = plot.calc_aceptancia("EventWeight_gen","EventWeight_gen_tot",BR)
   
   eff_muons = 0.99
   eff_btag = 0.8
+  unc_eff_muons = 0.01/0.99
+  unc_eff_btag = 0.1
+  unc_eff_trigg = (1-eff_trigg)/2
   eff_tot = eff_trigg*eff_muons*eff_btag
   
-  xsection = (datos-fondo)/(BR*Lumi*Acceptance*eff_tot)
-  print('La seccion eficaz experimental del proceso ttbar es: %3.3f pb' %xsection)
+  eficiencias = np.array([eff_muons,eff_btag,eff_trigg])
+  unc_eficiencias = np.array([unc_eff_muons,unc_eff_btag,unc_eff_trigg])
   
+  xsection = (datos-fondo)/(BR*Lumi*Acceptance*eff_tot)
+  
+  #-------Incertidumbres sistemáticas--------
+  lectura2 = np.loadtxt('syst_unc.txt', dtype='str' ,delimiter = ':')
+  lectura2 = np.char.strip(lectura2) #elimina los espacios que hay en el txt
+  MCmuestras = lectura2[:,1]
+  MCUnc = lectura2[:,2]
+  
+  contador1 = 0
+  
+  delta_xsection_up = []
+  delta_xsection_down = []
+  for name in MCmuestras: #propagación incertidumbre en normalización muestras MC
+    contador2 = 0
+    for name2 in muestras:
+      if name == name2:
+        fondo_up = fondo + eventos[contador2]*float(MCUnc[contador1])
+        fondo_down = fondo - eventos[contador2]*float(MCUnc[contador1])
+        xsection_up = (datos-fondo_up)/(BR*Lumi*Acceptance*eff_tot)
+        xsection_down = (datos-fondo_down)/(BR*Lumi*Acceptance*eff_tot)
+        delta_xsection_up.append(abs(xsection-xsection_up))  #la diferencia entre el valor nominal y la variación me da la incertidumbre asociada a ese sistemático sobre la xsection
+        delta_xsection_down.append(abs(xsection-xsection_down))
+      contador2 +=1
+    contador1 += 1    
+  
+  for i in range(0,len(eficiencias)): #Propagación incertidumbre en eficiencias
+    xsection_eff_up = (datos-fondo)/(BR*Lumi*Acceptance*((eff_tot*(eficiencias[i]+eficiencias[i]*unc_eficiencias[i]))/eficiencias[i]))
+    xsection_eff_down = (datos-fondo)/(BR*Lumi*Acceptance*((eff_tot*(eficiencias[i]-eficiencias[i]*unc_eficiencias[i]))/eficiencias[i]))
+    delta_xsection_up.append(abs(xsection-xsection_eff_up))  
+    delta_xsection_down.append(abs(xsection-xsection_eff_down))
+  
+  delta_xsection_up.append(abs(xsection-((datos-fondo)/(BR*Lumi*(Acceptance+unc_Acceptance)*eff_tot))))  #Propagación incertidumbre aceptancia
+  delta_xsection_down.append(abs(xsection-((datos-fondo)/(BR*Lumi*(Acceptance-unc_Acceptance)*eff_tot))))
+  
+  delta_xsection_lumi_up = abs(xsection-((datos-fondo)/(BR*(Lumi+Lumi*unc_Lumi)*Acceptance*eff_tot)))
+  delta_xsection_lumi_down = abs(xsection-((datos-fondo)/(BR*(Lumi-Lumi*unc_Lumi)*Acceptance*eff_tot)))
+    
+  delta_xsection_up_sys = np.sqrt(np.dot(np.array(delta_xsection_up),np.array(delta_xsection_up)))
+  delta_xsection_down_sys = np.sqrt(np.dot(np.array(delta_xsection_down),np.array(delta_xsection_down)))
+  
+    
+  #-------Incertidumbres sistemáticas--------
+  #-------Incertidumbres estadísticas--------
+  delta_xsection_stat_up = []
+  delta_xsection_stat_down = []
+  
+  delta_xsection_stat_up.append(abs(xsection-((datos+stat_datos-fondo)/(BR*Lumi*Acceptance*eff_tot))))
+  delta_xsection_stat_up.append(abs(xsection-((datos-fondo-stat_fondo)/(BR*Lumi*Acceptance*eff_tot))))
+  delta_xsection_stat_down.append(abs(xsection-((datos-stat_datos-fondo)/(BR*Lumi*Acceptance*eff_tot))))
+  delta_xsection_stat_down.append(abs(xsection-((datos-fondo+stat_fondo)/(BR*Lumi*Acceptance*eff_tot))))
+  
+  stat_xsection_up = np.sqrt(np.dot(np.array(delta_xsection_stat_up),np.array(delta_xsection_stat_up)))
+  stat_xsection_down = np.sqrt(np.dot(np.array(delta_xsection_stat_down),np.array(delta_xsection_stat_down)))
+  #-------Incertidumbres estadísticas--------
+  print('La seccion eficaz experimental del proceso ttbar es: %3.3f (+ %3.3f - %3.3f)(Stat.)(+ %3.3f - %3.3f)(Syst.) (+ %3.3f - %3.3f)(Lumi.) pb' %(xsection,stat_xsection_up,stat_xsection_down,delta_xsection_up_sys,delta_xsection_down_sys,delta_xsection_lumi_up,delta_xsection_lumi_down))
   plot.SaveCounts("MuonPt")
   plot.SaveCounts("EventWeight")
   archivo = open(comando[2] + "/yields_MuonPt.txt","a")
   archivo.write("xsection_obs = %4.4f pb\nA = %4.4f \neff = %4.4f \n" %(xsection,Acceptance,eff_tot))
   archivo.close()
   
-    
   return
   
   

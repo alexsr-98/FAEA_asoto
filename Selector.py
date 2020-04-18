@@ -51,6 +51,7 @@ class Selector:
         self.histograms.append(r.TH1F(self.name + '_MET', 'MET',30,0,200))
         self.histograms.append(r.TH1F(self.name + '_MuonPt_gen',';p_{T}^{#mu} (GeV);Events', 20, 0, 200))
         self.histograms.append(r.TH1F(self.name + '_EventWeight_gen','EventWeight',1,0,1))
+        self.histograms.append(r.TH1F(self.name + '_EventWeight_gen_tot','EventWeight',1,0,1))
         self.histograms.append(r.TH1F(self.name + '_NBJets','NBjets',4,0,4))
         self.histograms.append(r.TH1F(self.name + '_EventWeight','EventWeight',1,0,1))
         self.histograms.append(r.TH1F(self.name + '_NJets_NBJets','NJets_NBJets',8,0,8))
@@ -94,6 +95,7 @@ class Selector:
             #-----------Region fiducial------------------------
             #Voy a seleccionar muones con la distribución de pdgID y con un momento transverso igual que en mi región de señal, también tendremos en cuenta hasta donde se miden los muones en eta (eta<2.4), hasta donde se pueden identificar los jets b (eta<2.4) y también hasta donde se miden los jets ligeros (eta<5.2)
             if self.filename == 'files/ttbar.root':
+                self.GetHisto('EventWeight_gen_tot').Fill(0,event.EventWeight)
                 if abs(event.MCleptonPDGid) == 13: #13 es la ID del muon, los valores negativos son las antipartículas
                     muon1_gen = r.TLorentzVector()
                     energy_muon = (event.MClepton_px**2+event.MClepton_py**2+event.MClepton_pz**2+0.1056583745**2)**(0.5)
@@ -209,6 +211,35 @@ class Selector:
             self.trigger = event.triggerIsoMu24
             self.FillHistograms()
         return
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

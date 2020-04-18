@@ -363,6 +363,18 @@ class Plotter:
         
         return muestras,eventos
 #-------------FUNCION MIA----------------------------------------------------
+#-------------ACEPTANCIA-----------------------------------------------------
+    def calc_aceptancia(self, name1,name2,BR):
+        for s in self.listOfSelectors:
+            numerador = s.GetHisto(name1)
+            denominador = s.GetHisto(name2)
+            break
+            
+        numerador.Divide(denominador)
+        
+        return numerador.GetBinContent(1)/BR,numerador.GetBinError(1)/BR    
+#-------------ACEPTANCIA-----------------------------------------------------
+
 
     def SaveCounts(self, name, overridename = ""):
         ''' Save in a text file the number of events for each sample in a given histogram '''
