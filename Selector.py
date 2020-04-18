@@ -50,8 +50,10 @@ class Selector:
         #-----Histogramas para varias variables----
         self.histograms.append(r.TH1F(self.name + '_MET', 'MET',30,0,200))
         self.histograms.append(r.TH1F(self.name + '_MuonPt_gen',';p_{T}^{#mu} (GeV);Events', 20, 0, 200))
+        self.histograms.append(r.TH1F(self.name + '_EventWeight_gen','EventWeight',1,0,1))
         self.histograms.append(r.TH1F(self.name + '_NBJets','NBjets',4,0,4))
         self.histograms.append(r.TH1F(self.name + '_EventWeight','EventWeight',1,0,1))
+        self.histograms.append(r.TH1F(self.name + '_NJets_NBJets','NJets_NBJets',8,0,8))
         return
 
 
@@ -75,6 +77,7 @@ class Selector:
             self.GetHisto('MuonPt').Fill(self.muon1_pt,    self.weight)
             self.GetHisto('NBJets').Fill(self.nbjets, self.weight)
             self.GetHisto('EventWeight').Fill(0, self.weight)
+            self.GetHisto('NJets_NBJets').Fill(self.NBin,self.weight)
         return
 
 
@@ -120,6 +123,7 @@ class Selector:
                     #----4-momento quarks ligeros-------
                     if self.muon1_pt_gen >= self.seleccion[0] and muon1_gen.Eta()<2.4 and b_hadronic.Eta()<2.4 and b_leptonic.Eta()<2.4 and q_hadronic.Eta()<5.2 and qbar_hadronic.Eta()<5.2:
                         self.GetHisto('MuonPt_gen').Fill(self.muon1_pt_gen,event.EventWeight) 
+                        self.GetHisto('EventWeight_gen').Fill(0,event.EventWeight)
             #-----------Region fiducial------------------------        
             
             
@@ -183,6 +187,24 @@ class Selector:
                 self.NJet = event.NJet
                 self.MET = (event.MET_px*event.MET_px+event.MET_py*event.MET_py)**(0.5)
                 self.nbjets = NbJets
+                #---Histogram NJets_NBJets---
+                if self.NJet == 0:
+                    self.NBin = 0
+                if self.NJet == 1:
+                    self.NBin = 1
+                if self.NJet == 2 and self.nbjets == 0:
+                    self.NBin = 2
+                if self.NJet == 2 and self.nbjets >= 1:
+                    self.NBin = 3
+                if self.NJet == 3 and self.nbjets == 0:
+                    self.NBin = 4
+                if self.NJet == 3 and self.nbjets >= 1:
+                    self.NBin = 5
+                if self.NJet >= 4 and self.nbjets == 0:
+                    self.NBin = 6
+                if self.NJet >= 4 and self.nbjets >=1:
+                    self.NBin = 7
+                #---Histogram NJets_NBJets--- 
             ### Filling
             self.trigger = event.triggerIsoMu24
             self.FillHistograms()

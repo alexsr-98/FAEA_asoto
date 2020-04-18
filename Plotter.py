@@ -134,7 +134,7 @@ class Plotter:
         Max = hstack.GetStack().Last().GetMaximum()
         #Para el eje log
         if self.LogY:
-            c.SetLogy()
+            upperPad.SetLogy()
             self.LogY = False
         if self.data != '':
             hdata = self.dataSelector.GetHisto(name)
@@ -205,6 +205,20 @@ class Plotter:
         t5.Draw()
         
         lowerPad.SetGrid()
+        
+        #---For NJets_NBJets---
+        if name == 'NJets_NBJets':
+            labels_NJetsNBJets = ['(0,0)','(1,#geq0)','(2,0)','(2,#geq1)','(3,0)','(3,#geq1)','(#geq4,0)','(#geq4,#geq1)']
+            h3.GetXaxis().SetLabelSize(0.28)
+            c.cd(0)
+            t3 = r.TLatex(0.65,0.05,"#scale[0.9]{%2s}" %('(N_Jets,N_bJets)'))
+            t3.SetNDC(1)
+            t3.Draw()
+            lowerPad.cd()
+            for j in range(0,h3.GetNbinsX()):
+                h3.GetXaxis().SetBinLabel(j+1,labels_NJetsNBJets[j]) 
+        
+        #---For NJets_NBJets---        
         #-----Canvas data/pred-------
         #-----Incertidumbres---------
         upperPad.cd()
@@ -212,7 +226,7 @@ class Plotter:
         suma.SetFillColor(14)
         suma.SetFillStyle(3244)
         suma.SetLineColor(0)
-        l.AddEntry(suma, "Total unc.", "f")
+        l.AddEntry(suma, "Stat unc.", "f")
         l.Draw("same")
         #-----Incertidumbres---------
         create_folder(self.savepath)
@@ -327,6 +341,28 @@ class Plotter:
             print '------------------------------'
         return counts_ttbar, total, hdata.Integral()
 
+#-------------FUNCION MIA----------------------------------------------------
+    def GetCounts(self, name):
+        ''' Devuelve el numero de eventos  '''
+        if (isinstance(name, list)):
+            for nam in name: self.PrintEvents(nam)
+            return
+        muestras = []
+        eventos = []
+        total = 0.
+        for s in self.listOfSelectors:
+            h = s.GetHisto(name)
+            total += h.Integral()
+            muestras.append(s.name)
+            eventos.append(h.Integral())
+
+        if self.data != '':
+            hdata = self.dataSelector.GetHisto(name)
+            muestras.append('data')
+            eventos.append(hdata.Integral())            
+        
+        return muestras,eventos
+#-------------FUNCION MIA----------------------------------------------------
 
     def SaveCounts(self, name, overridename = ""):
         ''' Save in a text file the number of events for each sample in a given histogram '''

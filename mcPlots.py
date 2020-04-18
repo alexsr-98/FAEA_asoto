@@ -63,7 +63,7 @@ def drawer(options=''):
     plot.SetXtitle(titulos_graficas[contador])
     plot.SetYtitle('Events')
     plot.SetTitle(' ')
-    if i == 'NJet':
+    if i == 'NJet' or i == 'NJets_NBJets' or i == 'NBJets':
         plot.SetYaxislog()
     plot.Stack(i)
     contador += 1
@@ -71,24 +71,38 @@ def drawer(options=''):
   eff_trigg = plot.Trigger_Eff("MuonPt", "MuonPt_notrigg","MuonPt_forEff","MuonPt_notrigg_forEff")
   
   #---Calculo xsection----------
-  yields_ttbar, tot_MC, datos = plot.PrintCounts("MuonPt")
-  yields_ttbar_gen, tot_MC_gen, datos_gen = plot.PrintCounts("MuonPt_gen")
+  muestras,eventos = plot.GetCounts("EventWeight")
+  muestras_gen,eventos_gen = plot.GetCounts("EventWeight_gen")
+  
+  contador = 0
+  fondo = 0
+  for nombre in muestras:
+    if nombre == 'ttbar':
+      ttbar = eventos[contador]
+    elif nombre == 'data':
+      datos = eventos[contador]
+    else: 
+      fondo += eventos[contador]
+    contador += 1
+  
   Lumi = 50
-  BR = 0.09732
-  '''
-  BR = 0.22477
-  '''
-  Acceptance = yields_ttbar_gen/(BR*7929.47582548) #7929.47582548 es el numero total de eventos simulados de ttbar pesados
+  BR = 0.09732*2
+  Acceptance = eventos_gen[0]/(BR*7929.47582548) #7929.47582548 es el numero total de eventos simulados de ttbar pesados
+  
   eff_muons = 0.99
   eff_btag = 0.8
   eff_tot = eff_trigg*eff_muons*eff_btag
-  xsection = (datos-(tot_MC-yields_ttbar))/(BR*Lumi*Acceptance*eff_tot)
+  
+  xsection = (datos-fondo)/(BR*Lumi*Acceptance*eff_tot)
   print('La seccion eficaz experimental del proceso ttbar es: %3.3f pb' %xsection)
   
   plot.SaveCounts("MuonPt")
+  plot.SaveCounts("EventWeight")
   archivo = open(comando[2] + "/yields_MuonPt.txt","a")
   archivo.write("xsection_obs = %4.4f pb\nA = %4.4f \neff = %4.4f \n" %(xsection,Acceptance,eff_tot))
   archivo.close()
+  
+    
   return
   
   
