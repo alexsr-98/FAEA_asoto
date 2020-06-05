@@ -3,6 +3,7 @@ import os
 from Selector import Selector
 import ROOT as r
 import copy
+import numpy as np
 
 class Plotter:
     ''' Class to draw histograms and get info from Selector'''
@@ -273,7 +274,6 @@ class Plotter:
         num = h.Integral()
         den = h2.Integral()
         eff = 1.*num/den
-        print('La eficiencia de trigger para pt > 26 GeV: %3.3f' %eff)
         #---Eficiencia---
         h2.Draw("HIST")
         h.Draw("HIST SAME")
@@ -374,6 +374,36 @@ class Plotter:
         
         return numerador.GetBinContent(1)/BR,numerador.GetBinError(1)/BR    
 #-------------ACEPTANCIA-----------------------------------------------------
+#-------------EFICIENCIA BTAG------------------------------------------------
+    def calc_btag_eff(self,name1,name2):
+        for s in self.listOfSelectors:
+            numerador = s.GetHisto(name1)
+            denominador = s.GetHisto(name2)
+            break
+        num = 0
+        den = 0
+        unc_num = []
+        unc_den = []
+        for i in range(1,numerador.GetNbinsX()+1):
+            num += numerador.GetBinContent(i)*(i-1)
+            unc_num.append(numerador.GetBinError(i)*(i-1))
+            den += denominador.GetBinContent(i)*(i-1)
+            unc_den.append(denominador.GetBinError(i)*(i-1))
+        unctot_num = np.sqrt(np.dot(np.array(unc_num),np.array(unc_num)))
+        unctot_den = np.sqrt(np.dot(np.array(unc_den),np.array(unc_den)))
+         
+        unc_eff_up = []
+        unc_eff_down = []
+        eff = num/den
+        unc_eff_up.append(abs(eff-(num+unctot_num)/den))
+        unc_eff_down.append(abs(eff-(num-unctot_num)/den))
+        unc_eff_up.append(abs(eff-(num)/(den+unctot_den)))
+        unc_eff_down.append(abs(eff-(num)/(den-unctot_den)))
+        unctot_eff_up = np.sqrt(np.dot(np.array(unc_eff_up),np.array(unc_eff_up)))
+        unctot_eff_down = np.sqrt(np.dot(np.array(unc_eff_down),np.array(unc_eff_down)))
+        #Hay que aplicar el scale factor de b-tagging
+        return 0.9*eff, 0.9*(unctot_eff_up+unctot_eff_down)/2
+#-------------EFICIENCIA BTAG------------------------------------------------
 
 
     def SaveCounts(self, name, overridename = ""):
@@ -391,11 +421,18 @@ class Plotter:
         thelines.append("Number of events for histogram {h}:\n".format(h = name))
         thelines.append("----------------------------------------------------\n")
         total = 0.
+        total_err = 0
         for s in self.listOfSelectors:
             h = s.GetHisto(name)
-            thelines.append("{nam}: {num}\n".format(nam = s.name, num = h.Integral()))
+            err = 0
+            for i in range(1,h.GetNbinsX()+1):
+                err += (h.GetBinError(i))**2
+            err = err**(0.5)
+            thelines.append("{nam}: {num} +/- {error} (stat.) \n".format(nam = s.name, num = h.Integral(), error = err))
             total += h.Integral()
-        thelines.append('Expected (MC): {tot}\n'.format(tot = total))
+            total_err += err**2
+        total_err = (total_err)**(0.5)
+        thelines.append('Expected (MC): {tot} +/- {staterr} (stat.) \n'.format(tot = total, staterr = total_err))
         thelines.append('------------------------------\n')
         if self.data != '':
             hdata = self.dataSelector.GetHisto(name)

@@ -70,7 +70,7 @@ def drawer(options=''):
     contador += 1
   #---Seleccion de graficas a pintar---
   eff_trigg = plot.Trigger_Eff("MuonPt", "MuonPt_notrigg","MuonPt_forEff","MuonPt_notrigg_forEff")
-  
+  print('La eficiencia de trigger para pt > %3d GeV: %3.3f +- %3.3f' %(cortes_val[0],eff_trigg,(1-eff_trigg)/2))
   #---Calculo xsection----------
   muestras,eventos = plot.GetCounts("EventWeight")
   
@@ -95,12 +95,13 @@ def drawer(options=''):
   Acceptance, unc_Acceptance = plot.calc_aceptancia("EventWeight_gen","EventWeight_gen_tot",BR)
   
   eff_muons = 0.99
-  eff_btag = 0.8
+  #eff_btag = 0.8
   unc_eff_muons = 0.01/0.99
-  unc_eff_btag = 0.1
+  #unc_eff_btag = 0.1
   unc_eff_trigg = (1-eff_trigg)/2
+  eff_btag, unc_eff_btag = plot.calc_btag_eff("NBJets_correcto","NBJets")
   eff_tot = eff_trigg*eff_muons*eff_btag
-  
+  print('La eficiencia de btag es: %3.3f +- %3.3f' %(eff_btag,unc_eff_btag))
   eficiencias = np.array([eff_muons,eff_btag,eff_trigg])
   unc_eficiencias = np.array([unc_eff_muons,unc_eff_btag,unc_eff_trigg])
   
@@ -114,10 +115,12 @@ def drawer(options=''):
   
   contador1 = 0
   
+  nombres_sistematicos = []
   delta_xsection_up = []
   delta_xsection_down = []
   for name in MCmuestras: #propagación incertidumbre en normalización muestras MC
     contador2 = 0
+    nombres_sistematicos.append(name)
     for name2 in muestras:
       if name == name2:
         fondo_up = fondo + eventos[contador2]*float(MCUnc[contador1])
@@ -125,16 +128,20 @@ def drawer(options=''):
         xsection_up = (datos-fondo_up)/(BR*Lumi*Acceptance*eff_tot)
         xsection_down = (datos-fondo_down)/(BR*Lumi*Acceptance*eff_tot)
         delta_xsection_up.append(abs(xsection-xsection_up))  #la diferencia entre el valor nominal y la variación me da la incertidumbre asociada a ese sistemático sobre la xsection
-        delta_xsection_down.append(abs(xsection-xsection_down))
+        delta_xsection_down.append(abs(xsection-xsection_down))            
       contador2 +=1
     contador1 += 1    
   
+  nombres_sistematicos.append('reco_muones')
+  nombres_sistematicos.append('b-tag')
+  nombres_sistematicos.append('trigger')
   for i in range(0,len(eficiencias)): #Propagación incertidumbre en eficiencias
     xsection_eff_up = (datos-fondo)/(BR*Lumi*Acceptance*((eff_tot*(eficiencias[i]+eficiencias[i]*unc_eficiencias[i]))/eficiencias[i]))
     xsection_eff_down = (datos-fondo)/(BR*Lumi*Acceptance*((eff_tot*(eficiencias[i]-eficiencias[i]*unc_eficiencias[i]))/eficiencias[i]))
     delta_xsection_up.append(abs(xsection-xsection_eff_up))  
     delta_xsection_down.append(abs(xsection-xsection_eff_down))
   
+  nombres_sistematicos.append('aceptancia')
   delta_xsection_up.append(abs(xsection-((datos-fondo)/(BR*Lumi*(Acceptance+unc_Acceptance)*eff_tot))))  #Propagación incertidumbre aceptancia
   delta_xsection_down.append(abs(xsection-((datos-fondo)/(BR*Lumi*(Acceptance-unc_Acceptance)*eff_tot))))
   
@@ -161,8 +168,24 @@ def drawer(options=''):
   print('La seccion eficaz experimental del proceso ttbar es: %3.3f (+ %3.3f - %3.3f)(Stat.)(+ %3.3f - %3.3f)(Syst.) (+ %3.3f - %3.3f)(Lumi.) pb' %(xsection,stat_xsection_up,stat_xsection_down,delta_xsection_up_sys,delta_xsection_down_sys,delta_xsection_lumi_up,delta_xsection_lumi_down))
   plot.SaveCounts("MuonPt")
   plot.SaveCounts("EventWeight")
+  plot.SaveCounts("EventWeight_gen_tot")
+  plot.SaveCounts("MuonPt_gen")
   archivo = open(comando[2] + "/yields_MuonPt.txt","a")
-  archivo.write("xsection_obs = %4.4f pb\nA = %4.4f \neff = %4.4f \n" %(xsection,Acceptance,eff_tot))
+  archivo.write('La seccion eficaz experimental del proceso ttbar es: %3.3f (+ %3.3f - %3.3f)(Stat.)(+ %3.3f - %3.3f)(Syst.) (+ %3.3f - %3.3f)(Lumi.) pb \n' %(xsection,stat_xsection_up,stat_xsection_down,delta_xsection_up_sys,delta_xsection_down_sys,delta_xsection_lumi_up,delta_xsection_lumi_down))
+  archivo.write('La eficiencia de trigger para pt >= %3d GeV: %3.3f +- %3.3f \n' %(cortes_val[0],eff_trigg,(1-eff_trigg)/2))
+  archivo.write('La eficiencia de btag es: %3.3f +- %3.3f \n' %(eff_btag,unc_eff_btag))
+  archivo.write('La aceptancia es: %3.3f +- %3.3f \n' %(Acceptance, unc_Acceptance))
+  archivo.write(' \n')
+  archivo.write('%10s %10s \n' %('Sistematico','Impact'))
+  cont = 0
+  tot_sys = delta_xsection_up+delta_xsection_down
+  tot_sys = np.sum(np.array(tot_sys))/2
+  for nombre in nombres_sistematicos:
+    impact = ((delta_xsection_up[cont]+delta_xsection_down[cont])/(2*tot_sys))*100
+    archivo.write('%10s %10.3f \n' %(nombre,impact))
+    cont += 1
+    
+    
   archivo.close()
   
   return
@@ -187,4 +210,3 @@ print(r.kAzure-9)
 print(r.kGreen+4)
 '''
 
-#Puede estar guay mirar el trigger con eta

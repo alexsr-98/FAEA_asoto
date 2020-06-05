@@ -53,8 +53,11 @@ class Selector:
         self.histograms.append(r.TH1F(self.name + '_EventWeight_gen','EventWeight',1,0,1))
         self.histograms.append(r.TH1F(self.name + '_EventWeight_gen_tot','EventWeight',1,0,1))
         self.histograms.append(r.TH1F(self.name + '_NBJets','NBjets',4,0,4))
+        self.histograms.append(r.TH1F(self.name + '_NBJets_correcto','NBjets_correcto',4,0,4))
         self.histograms.append(r.TH1F(self.name + '_EventWeight','EventWeight',1,0,1))
         self.histograms.append(r.TH1F(self.name + '_NJets_NBJets','NJets_NBJets',8,0,8))
+        self.histograms.append(r.TH1F(self.name + '_Muon_Eta','Eta',5,-2.5,2.5))
+        self.histograms.append(r.TH1F(self.name + '_Muon_Phi','Phi',5,-3.14,3.14))
         return
 
 
@@ -77,8 +80,12 @@ class Selector:
             self.GetHisto('MuonPt_forEff').Fill(self.muon1_pt,    self.weight)
             self.GetHisto('MuonPt').Fill(self.muon1_pt,    self.weight)
             self.GetHisto('NBJets').Fill(self.nbjets, self.weight)
+            if self.filename == 'files/ttbar.root':
+                self.GetHisto('NBJets_correcto').Fill(self.jetbcorrecto, self.weight)
             self.GetHisto('EventWeight').Fill(0, self.weight)
             self.GetHisto('NJets_NBJets').Fill(self.NBin,self.weight)
+            self.GetHisto('Muon_Eta').Fill(self.muon1_eta,self.weight)
+            self.GetHisto('Muon_Phi').Fill(self.muon1_phi,self.weight)
         return
 
 
@@ -93,7 +100,7 @@ class Selector:
         
         for event in tree:
             #-----------Region fiducial------------------------
-            #Voy a seleccionar muones con la distribución de pdgID y con un momento transverso igual que en mi región de señal, también tendremos en cuenta hasta donde se miden los muones en eta (eta<2.4), hasta donde se pueden identificar los jets b (eta<2.4) y también hasta donde se miden los jets ligeros (eta<5.2)
+            #Voy a seleccionar muones con la distribución de pdgID y con un momento transverso igual que en mi región de señal, también tendremos en cuenta hasta donde se miden los muones en eta (eta<2.4), hasta donde se pueden identificar los jets b (eta<2.4) y también hasta donde se miden los jets ligeros (eta<5)
             if self.filename == 'files/ttbar.root':
                 self.GetHisto('EventWeight_gen_tot').Fill(0,event.EventWeight)
                 if abs(event.MCleptonPDGid) == 13: #13 es la ID del muon, los valores negativos son las antipartículas
@@ -123,7 +130,7 @@ class Selector:
                     qbar_hadronic.SetPy(event.MChadronicWDecayQuarkBar_py)
                     qbar_hadronic.SetPz(event.MChadronicWDecayQuarkBar_pz)                    
                     #----4-momento quarks ligeros-------
-                    if self.muon1_pt_gen >= self.seleccion[0] and muon1_gen.Eta()<2.4 and b_hadronic.Eta()<2.4 and b_leptonic.Eta()<2.4 and q_hadronic.Eta()<5.2 and qbar_hadronic.Eta()<5.2:
+                    if self.muon1_pt_gen >= self.seleccion[0] and muon1_gen.Eta()<2.4 and b_hadronic.Eta()<2.4 and b_leptonic.Eta()<2.4 and q_hadronic.Eta()<5.0 and qbar_hadronic.Eta()<5.0:
                         self.GetHisto('MuonPt_gen').Fill(self.muon1_pt_gen,event.EventWeight) 
                         self.GetHisto('EventWeight_gen').Fill(0,event.EventWeight)
             #-----------Region fiducial------------------------        
@@ -140,26 +147,13 @@ class Selector:
             #-------------------------------------------------------------------------------------------------------------------
             if event.NJet < self.seleccion[1]: continue #Selecting events with N jets
             #---------btag working point-----
-            '''
-            flag = 0
-            bTagScaleFactor = 1
-            if self.seleccion[2] == -1: #Esto es por si situamos el WP en -1, es decir, no imponemos restriccion en b-jets
-                flag = 1
-            else:
-                for i in range(0,event.NJet):
-                    if event.Jet_btag[i] >= self.seleccion[2]:
-                        flag = 1
-                        bTagScaleFactor = 0.9
-                        break
-                    else: continue
-            
-            if flag != 1: continue
-            '''
             NbJets = 0
             bTagScaleFactor = 1
+            indices_btag = []
             for i in range(0,event.NJet):
                 if event.Jet_btag[i] >= self.seleccion[2]:
                     NbJets = NbJets + 1
+                    indices_btag.append(i)
                 else: continue
             
             if NbJets == 1:
@@ -172,9 +166,6 @@ class Selector:
             #---------btag working point-----
             
             self.weight   = event.EventWeight*bTagScaleFactor if not self.name == 'data' else 1 #Scale Factor de b-tagging
-            '''
-            self.weight   = event.EventWeight if not self.name == 'data' else 1 
-            '''
             self.muon1_pt_notrigg = muon1_notrigg.Pt()
             self.muon1_pt_notrigg_forEff = muon1_notrigg.Pt()       
             
@@ -186,6 +177,8 @@ class Selector:
                 muon1.SetPxPyPzE(event.Muon_Px[0], event.Muon_Py[0], event.Muon_Pz[0], event.Muon_E[0])
                 self.muon1_pt = muon1.Pt()
                 self.muon1_pt_forEff = muon1.Pt()
+                self.muon1_eta = muon1.Eta()
+                self.muon1_phi = muon1.Phi()
                 self.NJet = event.NJet
                 self.MET = (event.MET_px*event.MET_px+event.MET_py*event.MET_py)**(0.5)
                 self.nbjets = NbJets
@@ -207,6 +200,28 @@ class Selector:
                 if self.NJet >= 4 and self.nbjets >=1:
                     self.NBin = 7
                 #---Histogram NJets_NBJets--- 
+                #---Cálculo eff btag---------
+                if self.filename == 'files/ttbar.root':
+                    self.jetbcorrecto = 0
+                    for i in indices_btag:
+                        jet = r.TLorentzVector()
+                        jet.SetPxPyPzE(event.Jet_Px[i],event.Jet_Py[i],event.Jet_Pz[i],event.Jet_E[i])
+                        jet_eta = jet.Eta()
+                        jet_phi = jet.Phi()
+                        b_hadronic = r.TLorentzVector()
+                        b_hadronic.SetPx(event.MChadronicBottom_px)
+                        b_hadronic.SetPy(event.MChadronicBottom_py)
+                        b_hadronic.SetPz(event.MChadronicBottom_pz)
+                        b_leptonic = r.TLorentzVector()
+                        b_leptonic.SetPx(event.MCleptonicBottom_px)
+                        b_leptonic.SetPy(event.MCleptonicBottom_py)
+                        b_leptonic.SetPz(event.MCleptonicBottom_pz)
+                        Delta_R1 = ((jet_eta-b_hadronic.Eta())**(2)+(jet_phi-b_hadronic.Phi())**(2))**(0.5)
+                        Delta_R2 = ((jet_eta-b_leptonic.Eta())**(2)+(jet_phi-b_leptonic.Phi())**(2))**(0.5)
+                        if Delta_R1<=0.2 or Delta_R2<=0.2:
+                            self.jetbcorrecto += 1
+                #---Cálculo eff btag---------
+                
             ### Filling
             self.trigger = event.triggerIsoMu24
             self.FillHistograms()

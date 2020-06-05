@@ -1,0 +1,9 @@
+#Muestra : Nombre  : Incertidumbre
+#TT+    : ttbar      : 810
+DY     : dy         : 0.15
+QCD    : qcd        : 1
+T      : single_top : 0.3
+WJets  : wjets      : 0.5
+WW     : ww         : 0.5
+WZ     : wz         : 0.5
+ZZ     : zz         : 0.5
